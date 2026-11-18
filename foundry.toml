@@ -1,0 +1,9 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+
+[rpc_endpoints]
+bsc = "https://bsc-dataseed1.defibit.io"
+bsc_testnet = "https://bsc-testnet-rpc.publicnode.com"

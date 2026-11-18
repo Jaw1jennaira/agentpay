@@ -43,9 +43,10 @@ const AGENTPAY_ABI = [
   "function invoiceCount() view returns (uint256)",
   "function payInvoice(uint256 id) payable",
   "function tip(string name, string memo) payable",
+  "function tipToken(address token, uint256 amount, string name, string memo)",
   "event InvoiceCreated(uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo)",
-  "event InvoicePaid(uint256 id, address payer, uint256 amount)",
-  "event TipSent(address from, address to, string toName, uint256 amount, string memo)",
+  "event InvoicePaid(uint256 id, address payer, address merchant, string merchantName, uint256 amount, address token)",
+  "event TipSent(address payer, address recipient, string name, uint256 amount, address token, string memo)",
 ];
 
 // Minimal ERC20 ABI (MockUSDT is 6 decimals).

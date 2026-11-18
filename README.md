@@ -112,12 +112,35 @@ invoiceCount() -> uint256
 payInvoice(uint256 id) payable                          // native: msg.value == amount;
                                                         // ERC20: approve + transferFrom
 tip(string name, string memo) payable                   // native tip to .ai owner
+tipToken(address token, uint256 amount, string name, string memo)
+                                                        // ERC20 tip to .ai owner (approve first)
+tokenIdOfName(string name) -> uint256                   // keccak256(label) tokenId, 0 if malformed
+registry() -> address                                   // Agent ID registry (immutable)
 ```
 
-`token == address(0)` means native BNB/tBNB. `tip` is native-only in the
-current spec (there is no `tipToken` in the ABI — if the final ABI adds one,
-the UI will offer token tips too). Events: `InvoiceCreated`, `InvoicePaid`,
-`TipSent`.
+`token == address(0)` means native BNB/tBNB. `tip` is native-only;
+ERC20 tips use `tipToken` (added in the final contract build 2026-11-19).
+Events: `InvoiceCreated`, `InvoicePaid`, `TipSent` (all carry the `.ai` name).
+
+## Contract build (2026-11-19)
+
+Contracts + Foundry tests delivered by the contract builder:
+
+- `src/AgentPay.sol` (mainnet-ready), `src/MockAgentIDRegistry.sol`,
+  `src/MockUSDT.sol` (testnet/test only), `script/Deploy.s.sol`,
+  `script/Demo.s.sol`, `abi/AgentPay.json`, `deployments.json`.
+- Tests: **32/32 pass** — 27 unit tests (mock registry: resolution,
+  invoice create/pay native + ERC20, tip native + ERC20, events, funds
+  settlement, reentrancy) + 5 fork tests against the REAL SPACE ID
+  registry on BSC mainnet (`jennairafunds.ai` →
+  `0xE450bAA47f6B9529E8C4135C2D95E63c9dd9f746`, unknown name → `ok=false`
+  without reverting).
+- Run: `forge test` (unit) and
+  `forge test --fork-url https://bsc-dataseed1.defibit.io --match-contract AgentPayForkTest` (fork).
+- **Deploy pending faucet:** deployer `0xFdE48E9AcC441cBC726A88CFD05c859AE5A0b84e`
+  holds 0 tBNB; the BNB testnet faucet requires hCaptcha in a browser
+  (`https://testnet.bnbchain.org/faucet-smart`) and cannot be claimed
+  programmatically. Deploy + demo run as soon as tBNB is available.
 
 ## Run locally
 
