@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentPay — Bayar ke nama Agent ID (.ai), bukan alamat 0x</title>
+<meta name="description" content="AgentPay: payment gateway + tipping untuk pemegang SPACE ID Agent ID (.ai) di BNB Chain Testnet. Bayar invoice, kirim tip, dan kelola invoice merchant — tanpa menghafal alamat 0x.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>Agent<span>Pay</span></h1>
+  <p class="tagline">Bayar ke nama Agent ID (.ai), bukan alamat 0x.</p>
+  <p>
+    <span class="badge">BNB Chain Testnet (chain 97)</span>
+    <span class="badge">SPACE ID Agent ID (.ai)</span>
+    <span class="badge warn" id="deployBadge">Status kontrak: belum di-deploy — mode preview</span>
+  </p>
+  <p class="muted small">
+    Kontrak: <code id="contractAddr">—</code> ·
+    MockUSDT: <code id="usdtAddr">—</code> ·
+    <a href="https://github.com/Jaw1jennaira/agentpay" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</header>
+
+<div id="cdnError">
+  Gagal memuat library ethers.js dari CDN. Periksa koneksi internet lalu muat ulang halaman ini.
+  (CDN: cdn.jsdelivr.net/npm/ethers@6.13.0)
+</div>
+
+<div class="card" id="placeholderBanner" style="display:none">
+  <strong>Mode preview — kontrak belum ter-deploy.</strong>
+  <p class="muted" style="margin:.3rem 0 0">
+    Alamat kontrak AgentPay di <code>config.js</code> masih placeholder
+    (<code>0x000…000</code>) karena deploy testnet menunggu saldo tBNB deployer.
+    Kamu tetap bisa menjelajahi UI ini, tapi tombol transaksi (resolve, buat invoice,
+    bayar, tip, dashboard) nonaktif sampai alamat kontrak diisi dari
+    <code>deployments.json</code> (wiring final).
+  </p>
+</div>
+
+<!-- 1. Connect wallet -->
+<div class="card">
+  <h2>1. Connect wallet</h2>
+  <button id="connectBtn">Connect MetaMask</button>
+  <button id="switchBtn" class="secondary" style="display:none">Pindah ke BSC Testnet</button>
+  <p id="walletInfo" class="muted">Belum terhubung. Butuh MetaMask (atau wallet injected lain) di BSC Testnet.</p>
+  <p id="agentIdStatus" class="muted"></p>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist">
+  <button class="active" data-tab="pay">Bayar</button>
+  <button data-tab="tip">Tip</button>
+  <button data-tab="create">Buat Invoice</button>
+  <button data-tab="dashboard">Dashboard Merchant</button>
+</div>
+
+<!-- Fitur 1: Bayar -->
+<section class="card tabpane active" id="tab-pay">
+  <h2>Bayar invoice</h2>
+  <p class="muted">Cek dulu nama merchant (.ai) — alamat hasil resolve on-chain tampil sebelum kamu bayar.
+  Pembayaran langsung ke nama (tanpa invoice) tersedia di tab <strong>Tip</strong>.</p>
+
+  <h3>Cek nama .ai</h3>
+  <label for="resolveName">Nama Agent ID (contoh: jennairafunds.ai)</label>
+  <input id="resolveName" type="text" placeholder="jennirafunds.ai" autocomplete="off">
+  <button id="resolveBtn" class="secondary">Cek alamat pemilik</button>
+  <p id="resolveMsg" class="msg muted"></p>
+
+  <h3>Bayar dengan ID invoice</h3>
+  <label for="payId">ID invoice</label>
+  <input id="payId" type="number" min="0" step="1" placeholder="0">
+  <button id="loadInvoiceBtn" class="secondary">Muat invoice</button>
+  <div id="invoiceDetail" style="margin-top:.6rem"></div>
+  <button id="approveBtn" style="display:none">Approve MockUSDT dulu</button>
+  <button id="payBtn" style="display:none">Bayar invoice</button>
+  <p id="payMsg" class="msg muted"></p>
+</section>
+
+<!-- Fitur 2: Tip -->
+<section class="card tabpane" id="tab-tip">
+  <h2>Kirim tip</h2>
+  <p class="muted">Tip native (tBNB) ke pemilik nama .ai. Tip dikirim langsung ke alamat hasil
+  resolve on-chain — selalu cek alamatnya sebelum konfirmasi di wallet.</p>
+  <label for="tipName">Nama .ai penerima</label>
+  <input id="tipName" type="text" value="jennirafunds.ai" autocomplete="off">
+  <label for="tipAmount">Jumlah (tBNB)</label>
+  <input id="tipAmount" type="number" min="0" step="0.001" placeholder="0.01">
+  <label for="tipMemo">Memo (opsional)</label>
+  <input id="tipMemo" type="text" placeholder="Terima kasih!" maxlength="140">
+  <button id="tipBtn">Kirim tip</button>
+  <p id="tipMsg" class="msg muted"></p>
+  <p class="muted small">Contoh demo: <code>jennirafunds.ai</code> — Agent ID milik user (wallet Binance).
+  Ini hanya contoh, bukan merchant aktif yang di-hardcode.</p>
+</section>
+
+<!-- Fitur 3: Buat invoice -->
+<section class="card tabpane" id="tab-create">
+  <h2>Buat invoice (merchant)</h2>
+  <p class="muted">Hanya untuk pemegang Agent ID (.ai). Wallet yang terhubung dicek dulu
+  dengan <code>hasAgentId()</code> — kontrak juga menegakkan aturan ini.</p>
+  <p id="createGateMsg" class="msg muted">Hubungkan wallet dulu untuk cek status Agent ID.</p>
+  <label for="invName">Nama .ai merchant (harus milik wallet kamu)</label>
+  <input id="invName" type="text" placeholder="jennirafunds.ai" autocomplete="off">
+  <label for="invAmount">Jumlah</label>
+  <input id="invAmount" type="number" min="0" step="0.01" placeholder="0.05">
+  <label for="invToken">Token pembayaran</label>
+  <select id="invToken">
+    <option value="native">tBNB (native)</option>
+    <option value="usdt">MockUSDT (6 desimal, testnet)</option>
+  </select>
+  <label for="invMemo">Memo / deskripsi</label>
+  <input id="invMemo" type="text" placeholder="Pembayaran layanan X" maxlength="140">
+  <button id="createBtn" disabled>Buat invoice</button>
+  <p id="createMsg" class="msg muted"></p>
+</section>
+
+<!-- Fitur 4: Dashboard -->
+<section class="card tabpane" id="tab-dashboard">
+  <h2>Dashboard merchant</h2>
+  <p class="muted">Invoice yang dibuat wallet terhubung, lengkap dengan status, jumlah, token,
+  memo, dan payer. Data dibaca langsung dari kontrak
+  (<code>invoiceCount</code> + <code>getInvoice</code>).</p>
+  <button id="refreshBtn" class="secondary">Muat ulang daftar</button>
+  <div style="overflow-x:auto; margin-top:.6rem">
+  <table>
+    <thead><tr><th>ID</th><th>Nama / Memo</th><th>Jumlah</th><th>Status</th><th>Payer</th><th>Dibayar</th></tr></thead>
+    <tbody id="invTable"><tr><td colspan="6" class="muted">Hubungkan wallet, lalu muat ulang.</td></tr></tbody>
+  </table>
+  </div>
+  <p id="dashMsg" class="msg muted"></p>
+</section>
+
+<div class="card">
+  <h2>Cara demo (end-to-end, testnet)</h2>
+  <ol class="small">
+    <li>Connect MetaMask di <strong>BSC Testnet</strong> (chain 97) dengan tBNB dari faucet.</li>
+    <li><strong>Merchant</strong> (pemegang Agent ID): tab <em>Buat Invoice</em> — isi nama .ai, jumlah, token, memo → buat invoice, catat ID-nya.</li>
+    <li><strong>Customer</strong>: tab <em>Bayar</em> — cek nama .ai merchant, muat invoice berdasarkan ID, Approve (bila MockUSDT), lalu Bayar. Cek link tx di BscScan testnet.</li>
+    <li><strong>Tip</strong>: tab <em>Tip</em> — kirim tBNB ke nama .ai mana pun beserta memo.</li>
+    <li><strong>Dashboard</strong>: merchant melihat invoice-nya berubah jadi <em>Dibayar</em> beserta payer.</li>
+  </ol>
+  <p class="muted small">Non-custodial: dana tidak pernah lewat server kami — semua pembayaran
+  langsung antar wallet lewat kontrak AgentPay. Jangan pernah membagikan private key / seed phrase ke siapa pun.</p>
+</div>
+
+<footer>
+  AgentPay — GAWE #198, entry hackathon Agent ID (BNB Chain + Binance Wallet) ·
+  <a href="https://github.com/Jaw1jennaira/agentpay" target="_blank" rel="noopener">github.com/Jaw1jennaira/agentpay</a> ·
+  Lisensi MIT · Testnet only, bukan mainnet.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+  // Fallback sederhana bila CDN gagal dimuat.
+  if (typeof window.ethers === "undefined") {
+    document.getElementById("cdnError").style.display = "block";
+  }
+</script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
