@@ -1,1 +1,35 @@
-{"abi":"abi/AgentPay.json","chainId":97,"contracts":{"AgentPay":null,"MockAgentIDRegistry":null,"MockUSDT":null},"demo":{"invoiceCreatedTx":null,"invoicePaidTx":null,"tipTx":null},"deployTxHashes":{},"deployer":"0xFdE48E9AcC441cBC726A88CFD05c859AE5A0b84e","network":"BSC Testnet","registry_mainnet":"0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F","status":"PENDING — deployer 0xFdE48E9AcC441cBC726A88CFD05c859AE5A0b84e holds 0 tBNB; BNB testnet faucet requires hCaptcha in a browser (https://testnet.bnbchain.org/faucet-smart). Deploy + demo run as soon as tBNB is available."}
+{
+  "abi": "abi/AgentPay.json",
+  "chainId": 97,
+  "contracts": {
+    "AgentPay": "0x2882D2406B660cF697221c52C616992bD6d0539f",
+    "MockAgentIDRegistry": "0x2eF0A9708182eB988f20C0C278224908e0Bc2FA9",
+    "MockUSDT": "0x88b8Aee182D2de2B62a0e0a458006608B2bA9b46"
+  },
+  "demo": {
+    "invoiceCreatedTx": "0x57c806027eab00bf6951760d9c0ce83b51d101c9bfa3b8dbe83faa3bc402e56e",
+    "invoicePaidTx": "0x3ab2f03722b28caa2c7862a8bb6d348c88a3da8786ee80d615fd0e15e61bd318",
+    "tipTx": "0xc7409ce900cc13902e6ab01d721ef767a8b358130adf5b284c3f062d5e30836f",
+    "invoiceId": 1,
+    "payer": "0x8B4696a2b0C1cfa961d5E417e7E8bee9CF91D5C5",
+    "merchantName": "merchant-demo.ai",
+    "amount": "0.01 tBNB",
+    "tipAmount": "0.005 tBNB",
+    "tipRecipient": "agentpay.ai"
+  },
+  "deployTxHashes": {
+    "AgentPay": "0x6517d1e138167d2e5a5860bcab01ce6214b17928404a3b31de679f1b773d7344",
+    "MockAgentIDRegistry": "0x0e59ad5429ddbba2b707f91fd39799657fc89db8f867c199c34db137f3d041e2",
+    "MockUSDT": "0xd0f8e24c81c002bce75b35481d61bef931fd4d2ece04460f89a8f6c3f703b59c"
+  },
+  "deployer": "0xFdE48E9AcC441cBC726A88CFD05c859AE5A0b84e",
+  "network": "BSC Testnet",
+  "registry_mainnet": "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F",
+  "explorer": "https://testnet.bscscan.com/address/0x2882D2406B660cF697221c52C616992bD6d0539f",
+  "gasUsed": {
+    "deployTotal": 5559413,
+    "agentPayCreate": 2533433,
+    "demoTotal": 347047
+  },
+  "status": "DEPLOYED + DEMO OK 2026-11-19 ~03:10 WIB. Invoice #1 (merchant-demo.ai, 0.01 tBNB) dibuat + dibayar, tip 0.005 tBNB ke agentpay.ai — semua tx status 1, invoiceCount=1 terverifikasi via 2 RPC. Sourcify verification PENDING — forge verify timed out submitting to sourcify.dev (approval timeout, jangan retry tanpa persetujuan). Frontend wired, live di GitHub Pages."
+}

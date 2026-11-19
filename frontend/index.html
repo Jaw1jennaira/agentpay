@@ -82,11 +82,16 @@
 <!-- Fitur 2: Tip -->
 <section class="card tabpane" id="tab-tip">
   <h2>Kirim tip</h2>
-  <p class="muted">Tip native (tBNB) ke pemilik nama .ai. Tip dikirim langsung ke alamat hasil
+  <p class="muted">Tip ke pemilik nama .ai — tBNB native atau MockUSDT. Tip dikirim langsung ke alamat hasil
   resolve on-chain — selalu cek alamatnya sebelum konfirmasi di wallet.</p>
   <label for="tipName">Nama .ai penerima</label>
   <input id="tipName" type="text" value="jennirafunds.ai" autocomplete="off">
-  <label for="tipAmount">Jumlah (tBNB)</label>
+  <label for="tipToken">Token</label>
+  <select id="tipToken">
+    <option value="native">tBNB (native)</option>
+    <option value="usdt">MockUSDT</option>
+  </select>
+  <label for="tipAmount">Jumlah</label>
   <input id="tipAmount" type="number" min="0" step="0.001" placeholder="0.01">
   <label for="tipMemo">Memo (opsional)</label>
   <input id="tipMemo" type="text" placeholder="Terima kasih!" maxlength="140">
