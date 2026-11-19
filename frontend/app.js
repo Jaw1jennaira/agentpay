@@ -42,6 +42,9 @@ function friendlyError(e) {
   if (/user rejected/i.test(msg)) return "Transaction cancelled — you rejected it in your wallet.";
   if (/network|chain/i.test(msg) && /mismatch|wrong|unsupported/i.test(msg))
     return "Wrong network — switch to BSC Testnet (chain 97).";
+  if (/SelfPayment/i.test(msg)) return "You can't pay your own invoice or tip your own name.";
+  if (/AlreadyPaid/i.test(msg)) return "This invoice is already paid.";
+  if (/InvoiceNotFound/i.test(msg)) return "Invoice not found — check the ID.";
   if (/could not coalesce|missing revert data|call revert/i.test(msg))
     return "Contract call failed — the contract may not be deployed at this address.";
   if (/resolver|name not found|ENS/i.test(msg)) return "Name not found.";
@@ -515,7 +518,7 @@ async function createClicked() {
       }
     } catch (e) { /* fallback below */ }
     if (newId === null) {
-      try { newId = Number(await agentpayRead.invoiceCount()) - 1; } catch (e) { /* ignore */ }
+      try { newId = Number(await agentpayRead.invoiceCount()); } catch (e) { /* ignore */ }
     }
     setMsg($("createMsg"),
       `Invoice ${newId !== null ? "#" + newId : ""} created ✓ ${txLink(receipt.hash)}` +
@@ -547,8 +550,8 @@ async function refreshDashboard() {
       return;
     }
     const rows = [];
-    const start = Math.max(0, count - 100); // limit to the latest 100
-    for (let id = count - 1; id >= start; id--) {
+    const start = Math.max(1, count - 99); // limit to the latest 100 (IDs are 1-based)
+    for (let id = count; id >= start; id--) {
       const inv = await agentpayRead.getInvoice(id);
       if (inv[1].toLowerCase() !== account.toLowerCase()) continue;
       const paid = inv[6];
