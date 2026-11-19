@@ -4,7 +4,7 @@
 //
 // Flow: read-only calls use the public RPC; writes need a connected wallet
 // (MetaMask / injected provider) on BSC Testnet. Until CONFIG holds the real
-// deployed addresses (wiring final from deployments.json), every on-chain
+// deployed addresses (final wiring from deployments.json), every on-chain
 // action is disabled with a clear message — see isPlaceholder().
 
 const $ = (id) => document.getElementById(id);
@@ -29,23 +29,23 @@ const shortAddr = (a) =>
   a ? a.slice(0, 6) + "…" + a.slice(-4) : "—";
 
 const txLink = (hash) =>
-  `<a href="${EXPLORER}/tx/${hash}" target="_blank" rel="noopener">Lihat tx di BscScan ↗</a>`;
+  `<a href="${EXPLORER}/tx/${hash}" target="_blank" rel="noopener">View tx on BscScan ↗</a>`;
 
 const addrLink = (a) =>
   `<a href="${EXPLORER}/address/${a}" target="_blank" rel="noopener" class="addr">${shortAddr(a)}</a>`;
 
-// ---- Pesan error yang dimengerti user --------------------------------------
+// ---- User-friendly error messages ------------------------------------------
 function friendlyError(e) {
-  const msg = (e && (e.reason || e.message)) || String(e || "error tidak diketahui");
-  if (e && e.code === "ACTION_REJECTED") return "Transaksi dibatalkan — kamu menolak di wallet.";
-  if (/insufficient funds/i.test(msg)) return "Saldo tidak cukup (cek saldo tBNB untuk jumlah + gas).";
-  if (/user rejected/i.test(msg)) return "Transaksi dibatalkan — kamu menolak di wallet.";
+  const msg = (e && (e.reason || e.message)) || String(e || "unknown error");
+  if (e && e.code === "ACTION_REJECTED") return "Transaction cancelled — you rejected it in your wallet.";
+  if (/insufficient funds/i.test(msg)) return "Insufficient balance (check your tBNB balance for amount + gas).";
+  if (/user rejected/i.test(msg)) return "Transaction cancelled — you rejected it in your wallet.";
   if (/network|chain/i.test(msg) && /mismatch|wrong|unsupported/i.test(msg))
-    return "Network salah — pindah ke BSC Testnet (chain 97).";
+    return "Wrong network — switch to BSC Testnet (chain 97).";
   if (/could not coalesce|missing revert data|call revert/i.test(msg))
-    return "Panggilan kontrak gagal — kemungkinan kontrak belum ter-deploy di alamat ini.";
-  if (/resolver|name not found|ENS/i.test(msg)) return "Nama tidak ditemukan.";
-  return "Gagal: " + msg;
+    return "Contract call failed — the contract may not be deployed at this address.";
+  if (/resolver|name not found|ENS/i.test(msg)) return "Name not found.";
+  return "Failed: " + msg;
 }
 
 function setMsg(el, text, isError) {
@@ -56,7 +56,7 @@ function setMsg(el, text, isError) {
 // ---- Init ------------------------------------------------------------------
 function init() {
   $("contractAddr").textContent = isPlaceholder()
-    ? CONFIG.AGENTPAY_ADDRESS + " (placeholder — belum di-deploy)"
+    ? CONFIG.AGENTPAY_ADDRESS + " (placeholder — not deployed yet)"
     : CONFIG.AGENTPAY_ADDRESS;
   $("usdtAddr").textContent =
     CONFIG.MOCK_USDT_ADDRESS.toLowerCase() === ZERO
@@ -65,9 +65,9 @@ function init() {
 
   if (isPlaceholder()) {
     $("placeholderBanner").style.display = "block";
-    $("deployBadge").textContent = "Status kontrak: belum di-deploy — mode preview";
+    $("deployBadge").textContent = "Contract status: not deployed yet — preview mode";
   } else {
-    $("deployBadge").textContent = "Status kontrak: ter-deploy di testnet";
+    $("deployBadge").textContent = "Contract status: deployed on testnet";
     $("deployBadge").classList.remove("warn");
     $("placeholderBanner").style.display = "none";
   }
@@ -136,28 +136,28 @@ function parseAmountForToken(amountStr, token) {
 
 async function ensureAgentpay() {
   if (isPlaceholder()) throw new Error("PLACEHOLDER");
-  if (!agentpayRead) throw new Error("Kontrak belum siap — muat ulang halaman.");
+  if (!agentpayRead) throw new Error("Contract not ready — reload the page.");
   return true;
 }
 
 // ---- 5. Connect wallet ------------------------------------------------------
 async function connect() {
   if (typeof window.ethers === "undefined") {
-    setMsg($("walletInfo"), "Library ethers.js belum termuat — periksa koneksi lalu muat ulang halaman.", true);
+    setMsg($("walletInfo"), "The ethers.js library hasn't loaded — check your connection, then reload the page.", true);
     return;
   }
   if (!window.ethereum) {
-    setMsg($("walletInfo"), "Wallet tidak ditemukan. Pasang MetaMask (atau wallet lain) lalu muat ulang halaman.", true);
+    setMsg($("walletInfo"), "No wallet found. Install MetaMask (or another wallet), then reload the page.", true);
     return;
   }
-  setMsg($("walletInfo"), "Menghubungkan…", false);
+  setMsg($("walletInfo"), "Connecting…", false);
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     const net = await provider.getNetwork();
     if (Number(net.chainId) !== CHAIN_ID) {
       $("switchBtn").style.display = "";
-      setMsg($("walletInfo"), "Wallet terhubung tapi di network lain (chain " + Number(net.chainId) + "). Klik “Pindah ke BSC Testnet”.", true);
+      setMsg($("walletInfo"), "Wallet connected but on another network (chain " + Number(net.chainId) + "). Click “Switch to BSC Testnet”.", true);
       signer = await provider.getSigner();
       account = await signer.getAddress();
       await updateWalletInfo();
@@ -182,7 +182,7 @@ async function switchNetwork() {
     await connect();
   } catch (e) {
     if (e && e.code === 4902) {
-      // Chain belum ditambahkan di wallet — tambahkan.
+      // Chain not added in the wallet yet — add it.
       try {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
@@ -210,10 +210,10 @@ async function updateWalletInfo() {
   try {
     const bal = await provider.getBalance(account);
     $("walletInfo").innerHTML =
-      `Terhubung: <code>${account}</code><br>Saldo: ${ethers.formatEther(bal)} tBNB · ` +
+      `Connected: <code>${account}</code><br>Balance: ${ethers.formatEther(bal)} tBNB · ` +
       `<a href="${EXPLORER}/address/${account}" target="_blank" rel="noopener">BscScan ↗</a>`;
   } catch (e) {
-    $("walletInfo").textContent = "Terhubung: " + account;
+    $("walletInfo").textContent = "Connected: " + account;
   }
   await checkAgentId();
   refreshDashboard();
@@ -223,29 +223,29 @@ async function checkAgentId() {
   const gate = $("createGateMsg");
   if (isPlaceholder()) {
     $("agentIdStatus").textContent =
-      "Status Agent ID: belum bisa dicek — kontrak AgentPay belum ter-deploy (alamat placeholder).";
+      "Agent ID status: can't be checked yet — the AgentPay contract isn't deployed (placeholder address).";
     gate.textContent =
-      "Wallet ini belum bisa dicek — kontrak belum ter-deploy. Buat invoice aktif setelah wiring final.";
+      "This wallet can't be checked yet — the contract isn't deployed. Creating invoices activates after the final wiring.";
     $("createBtn").disabled = true;
     return false;
   }
   try {
     const has = await agentpayRead.hasAgentId(account);
     if (has) {
-      $("agentIdStatus").innerHTML = `<span class="ok">✓ Wallet ini memegang Agent ID (.ai).</span>`;
-      gate.textContent = "Wallet ini memegang Agent ID — kamu bisa buat invoice.";
+      $("agentIdStatus").innerHTML = `<span class="ok">✓ This wallet holds an Agent ID (.ai).</span>`;
+      gate.textContent = "This wallet holds an Agent ID — you can create invoices.";
       $("createBtn").disabled = false;
     } else {
       $("agentIdStatus").innerHTML =
-        `<span class="err">Wallet ini tidak memegang Agent ID (.ai) — buat invoice hanya untuk pemegang Agent ID.</span>`;
+        `<span class="err">This wallet doesn't hold an Agent ID (.ai) — creating invoices is for Agent ID holders only.</span>`;
       gate.textContent =
-        "Wallet ini tidak memegang Agent ID (.ai) — buat invoice hanya untuk pemegang Agent ID.";
+        "This wallet doesn't hold an Agent ID (.ai) — creating invoices is for Agent ID holders only.";
       $("createBtn").disabled = true;
     }
     return has;
   } catch (e) {
-    $("agentIdStatus").textContent = "Status Agent ID tidak bisa dicek: " + friendlyError(e);
-    gate.textContent = "Status Agent ID tidak bisa dicek — coba lagi.";
+    $("agentIdStatus").textContent = "Agent ID status couldn't be checked: " + friendlyError(e);
+    gate.textContent = "Agent ID status couldn't be checked — try again.";
     $("createBtn").disabled = true;
     return false;
   }
@@ -255,22 +255,22 @@ async function checkAgentId() {
 async function resolveClicked() {
   const name = $("resolveName").value.trim().toLowerCase();
   if (!validAiName(name)) {
-    setMsg($("resolveMsg"), "Nama tidak valid — harus berakhiran .ai (contoh: jennairafunds.ai).", true);
+    setMsg($("resolveMsg"), "Invalid name — it must end with .ai (e.g. jennairafunds.ai).", true);
     return;
   }
   if (isPlaceholder()) {
-    setMsg($("resolveMsg"), "Kontrak belum ter-deploy (alamat placeholder) — resolve on-chain belum bisa. Coba lagi setelah wiring final.", true);
+    setMsg($("resolveMsg"), "Contract not deployed yet (placeholder address) — on-chain resolve isn't available. Try again after the final wiring.", true);
     return;
   }
-  setMsg($("resolveMsg"), "Mengecek " + name + " di kontrak…", false);
+  setMsg($("resolveMsg"), "Checking " + name + " on the contract…", false);
   try {
     const [owner, ok] = await agentpayRead.resolveName(name);
     if (!ok || owner.toLowerCase() === ZERO) {
-      setMsg($("resolveMsg"), `Nama ${name} tidak ditemukan / tidak punya pemilik di registry.`, true);
+      setMsg($("resolveMsg"), `Name ${name} not found / has no owner in the registry.`, true);
       return;
     }
     $("resolveMsg").innerHTML =
-      `<span class="ok">✓ ${name} → pemilik ${addrLink(owner)}</span>`;
+      `<span class="ok">✓ ${name} → owner ${addrLink(owner)}</span>`;
   } catch (e) {
     setMsg($("resolveMsg"), friendlyError(e), true);
   }
@@ -279,15 +279,15 @@ async function resolveClicked() {
 async function loadInvoiceClicked() {
   const idRaw = $("payId").value.trim();
   if (idRaw === "" || Number(idRaw) < 0 || !Number.isInteger(Number(idRaw))) {
-    setMsg($("payMsg"), "Masukkan ID invoice yang valid (angka ≥ 0).", true);
+    setMsg($("payMsg"), "Enter a valid invoice ID (number ≥ 0).", true);
     return;
   }
   const id = Number(idRaw);
   if (isPlaceholder()) {
-    setMsg($("payMsg"), "Kontrak belum ter-deploy (alamat placeholder) — invoice belum bisa dimuat. Coba lagi setelah wiring final.", true);
+    setMsg($("payMsg"), "Contract not deployed yet (placeholder address) — invoices can't be loaded. Try again after the final wiring.", true);
     return;
   }
-  setMsg($("payMsg"), "Memuat invoice #" + id + "…", false);
+  setMsg($("payMsg"), "Loading invoice #" + id + "…", false);
   try {
     const inv = await agentpayRead.getInvoice(id);
     currentInvoice = {
@@ -307,7 +307,7 @@ async function loadInvoiceClicked() {
     $("invoiceDetail").innerHTML = "";
     $("approveBtn").style.display = "none";
     $("payBtn").style.display = "none";
-    setMsg($("payMsg"), "Invoice #" + id + " tidak ditemukan. " + friendlyError(e), true);
+    setMsg($("payMsg"), "Invoice #" + id + " not found. " + friendlyError(e), true);
   }
 }
 
@@ -315,34 +315,34 @@ function renderInvoiceDetail() {
   const inv = currentInvoice;
   if (!inv) return;
   const status = inv.paid
-    ? `<span class="pill paid">Dibayar</span>`
-    : `<span class="pill unpaid">Belum dibayar</span>`;
+    ? `<span class="pill paid">Paid</span>`
+    : `<span class="pill unpaid">Unpaid</span>`;
   $("invoiceDetail").innerHTML =
     `<table>
       <tr><th>Invoice</th><td>#${inv.id} ${status}</td></tr>
       <tr><th>Merchant</th><td>${inv.merchantName ? inv.merchantName + " · " : ""}${addrLink(inv.merchant)}</td></tr>
-      <tr><th>Jumlah</th><td>${formatAmount(inv.amount, inv.token)}</td></tr>
+      <tr><th>Amount</th><td>${formatAmount(inv.amount, inv.token)}</td></tr>
       <tr><th>Memo</th><td>${inv.memo || "—"}</td></tr>
-      ${inv.paid ? `<tr><th>Payer</th><td>${addrLink(inv.payer)} · ${new Date(inv.paidAt * 1000).toLocaleString("id-ID")}</td></tr>` : ""}
+      ${inv.paid ? `<tr><th>Payer</th><td>${addrLink(inv.payer)} · ${new Date(inv.paidAt * 1000).toLocaleString("en-US")}</td></tr>` : ""}
     </table>`;
   if (inv.paid) {
     $("approveBtn").style.display = "none";
     $("payBtn").style.display = "none";
-    setMsg($("payMsg"), "Invoice ini sudah dibayar — tidak bisa dibayar lagi.", false);
+    setMsg($("payMsg"), "This invoice is already paid — it can't be paid again.", false);
     return;
   }
   if (!account) {
     $("approveBtn").style.display = "none";
     $("payBtn").style.display = "none";
-    setMsg($("payMsg"), "Hubungkan wallet dulu untuk membayar.", true);
+    setMsg($("payMsg"), "Connect your wallet first to pay.", true);
     return;
   }
-  setMsg($("payMsg"), "Invoice dimuat. Periksa merchant & jumlah di atas sebelum bayar.", false);
+  setMsg($("payMsg"), "Invoice loaded. Check the merchant & amount above before paying.", false);
   if (inv.token.toLowerCase() === ZERO) {
     $("approveBtn").style.display = "none";
     $("payBtn").style.display = "";
   } else {
-    // ERC20: cek allowance dulu — tombol Approve muncul bila perlu.
+    // ERC20: check allowance first — the Approve button appears if needed.
     $("payBtn").style.display = "none";
     $("approveBtn").style.display = "";
     checkAllowance();
@@ -357,26 +357,26 @@ async function checkAllowance() {
     if (allowance >= currentInvoice.amount) {
       $("approveBtn").style.display = "none";
       $("payBtn").style.display = "";
-      setMsg($("payMsg"), "Allowance cukup — kamu bisa langsung bayar.", false);
+      setMsg($("payMsg"), "Allowance is enough — you can pay directly.", false);
     } else {
-      setMsg($("payMsg"), "Token ini butuh Approve dulu sebelum dibayar (ERC20 transferFrom).", false);
+      setMsg($("payMsg"), "This token needs Approve first before paying (ERC20 transferFrom).", false);
     }
   } catch (e) {
-    setMsg($("payMsg"), "Tidak bisa cek allowance: " + friendlyError(e), true);
+    setMsg($("payMsg"), "Couldn't check allowance: " + friendlyError(e), true);
   }
 }
 
 async function approveClicked() {
   if (!currentInvoice || !account || !signer) return;
-  setMsg($("payMsg"), "Mengirim Approve… konfirmasi di wallet.", false);
+  setMsg($("payMsg"), "Sending Approve… confirm in your wallet.", false);
   try {
     const token = new ethers.Contract(currentInvoice.token, ERC20_ABI, signer);
     const tx = await token.approve(CONFIG.AGENTPAY_ADDRESS, currentInvoice.amount);
-    setMsg($("payMsg"), "Approve terkirim, menunggu konfirmasi… " + txLink(tx.hash), false);
+    setMsg($("payMsg"), "Approve sent, waiting for confirmation… " + txLink(tx.hash), false);
     await tx.wait();
     $("approveBtn").style.display = "none";
     $("payBtn").style.display = "";
-    setMsg($("payMsg"), "Approve berhasil ✓ — sekarang klik Bayar invoice.", false);
+    setMsg($("payMsg"), "Approve succeeded ✓ — now click Pay invoice.", false);
   } catch (e) {
     setMsg($("payMsg"), friendlyError(e), true);
   }
@@ -385,7 +385,7 @@ async function approveClicked() {
 async function payClicked() {
   if (!currentInvoice || !account || !signer) return;
   const inv = currentInvoice;
-  setMsg($("payMsg"), "Mengirim pembayaran… konfirmasi di wallet.", false);
+  setMsg($("payMsg"), "Sending payment… confirm in your wallet.", false);
   try {
     let tx;
     if (inv.token.toLowerCase() === ZERO) {
@@ -393,11 +393,11 @@ async function payClicked() {
     } else {
       tx = await agentpay.payInvoice(inv.id);
     }
-    setMsg($("payMsg"), "Pembayaran terkirim, menunggu konfirmasi… " + txLink(tx.hash), false);
+    setMsg($("payMsg"), "Payment sent, waiting for confirmation… " + txLink(tx.hash), false);
     const receipt = await tx.wait();
     currentInvoice.paid = true;
     renderInvoiceDetail();
-    setMsg($("payMsg"), `Invoice #${inv.id} berhasil dibayar ✓ ${txLink(receipt.hash)}`, false);
+    setMsg($("payMsg"), `Invoice #${inv.id} paid successfully ✓ ${txLink(receipt.hash)}`, false);
     refreshDashboard();
   } catch (e) {
     setMsg($("payMsg"), friendlyError(e), true);
@@ -413,30 +413,30 @@ async function tipClicked() {
   const isUsdt = tokenKind === "usdt";
   const unit = isUsdt ? "MockUSDT" : "tBNB";
   if (!validAiName(name)) {
-    setMsg($("tipMsg"), "Nama tidak valid — harus berakhiran .ai (contoh: jennairafunds.ai).", true);
+    setMsg($("tipMsg"), "Invalid name — it must end with .ai (e.g. jennairafunds.ai).", true);
     return;
   }
   if (!amountStr || Number(amountStr) <= 0) {
-    setMsg($("tipMsg"), "Masukkan jumlah tip lebih dari 0 " + unit + ".", true);
+    setMsg($("tipMsg"), "Enter a tip amount greater than 0 " + unit + ".", true);
     return;
   }
   if (!account || !signer) {
-    setMsg($("tipMsg"), "Hubungkan wallet dulu untuk kirim tip.", true);
+    setMsg($("tipMsg"), "Connect your wallet first to send a tip.", true);
     return;
   }
   if (isPlaceholder()) {
-    setMsg($("tipMsg"), "Kontrak belum ter-deploy (alamat placeholder) — tip belum bisa dikirim. Coba lagi setelah wiring final.", true);
+    setMsg($("tipMsg"), "Contract not deployed yet (placeholder address) — tips can't be sent. Try again after the final wiring.", true);
     return;
   }
   if (isUsdt && CONFIG.MOCK_USDT_ADDRESS.toLowerCase() === ZERO) {
-    setMsg($("tipMsg"), "Alamat MockUSDT masih placeholder — pilih tBNB untuk sementara.", true);
+    setMsg($("tipMsg"), "The MockUSDT address is still a placeholder — choose tBNB for now.", true);
     return;
   }
-  setMsg($("tipMsg"), "Mengecek " + name + " dulu…", false);
+  setMsg($("tipMsg"), "Checking " + name + " first…", false);
   try {
     const [owner, ok] = await agentpayRead.resolveName(name);
     if (!ok || owner.toLowerCase() === ZERO) {
-      setMsg($("tipMsg"), `Nama ${name} tidak ditemukan / tidak punya pemilik — tip dibatalkan.`, true);
+      setMsg($("tipMsg"), `Name ${name} not found / has no owner — tip cancelled.`, true);
       return;
     }
     let tx;
@@ -444,68 +444,68 @@ async function tipClicked() {
       const amount = ethers.parseUnits(amountStr, 6);
       const token = new ethers.Contract(CONFIG.MOCK_USDT_ADDRESS, ERC20_ABI, signer);
       const allowance = await token.allowance(account, CONFIG.AGENTPAY_ADDRESS);
-      setMsg($("tipMsg"), `Mengirim ${amountStr} MockUSDT ke ${name} (${shortAddr(owner)})… konfirmasi di wallet.`, false);
+      setMsg($("tipMsg"), `Sending ${amountStr} MockUSDT to ${name} (${shortAddr(owner)})… confirm in your wallet.`, false);
       if (allowance < amount) {
         const atx = await token.approve(CONFIG.AGENTPAY_ADDRESS, amount);
-        setMsg($("tipMsg"), "Approve MockUSDT terkirim, menunggu konfirmasi… " + txLink(atx.hash), false);
+        setMsg($("tipMsg"), "MockUSDT Approve sent, waiting for confirmation… " + txLink(atx.hash), false);
         await atx.wait();
       }
       tx = await agentpay.tipToken(CONFIG.MOCK_USDT_ADDRESS, amount, name, memo);
     } else {
-      setMsg($("tipMsg"), `Mengirim ${amountStr} tBNB ke ${name} (${shortAddr(owner)})… konfirmasi di wallet.`, false);
+      setMsg($("tipMsg"), `Sending ${amountStr} tBNB to ${name} (${shortAddr(owner)})… confirm in your wallet.`, false);
       tx = await agentpay.tip(name, memo, { value: ethers.parseEther(amountStr) });
     }
-    setMsg($("tipMsg"), "Tip terkirim, menunggu konfirmasi… " + txLink(tx.hash), false);
+    setMsg($("tipMsg"), "Tip sent, waiting for confirmation… " + txLink(tx.hash), false);
     const receipt = await tx.wait();
-    setMsg($("tipMsg"), `Tip ${amountStr} ${unit} ke ${name} berhasil ✓ ${txLink(receipt.hash)}`, false);
+    setMsg($("tipMsg"), `Tip of ${amountStr} ${unit} to ${name} sent ✓ ${txLink(receipt.hash)}`, false);
   } catch (e) {
     setMsg($("tipMsg"), friendlyError(e), true);
   }
 }
 
-// ---- 3. Buat invoice ----------------------------------------------------------
+// ---- 3. Create invoice ----------------------------------------------------------
 async function createClicked() {
   const name = $("invName").value.trim().toLowerCase();
   const amountStr = $("invAmount").value.trim();
   const tokenKind = $("invToken").value;
   const memo = $("invMemo").value.trim();
   if (!validAiName(name)) {
-    setMsg($("createMsg"), "Nama merchant tidak valid — harus berakhiran .ai dan milik wallet kamu.", true);
+    setMsg($("createMsg"), "Invalid merchant name — it must end with .ai and belong to your wallet.", true);
     return;
   }
   if (!amountStr || Number(amountStr) <= 0) {
-    setMsg($("createMsg"), "Masukkan jumlah lebih dari 0.", true);
+    setMsg($("createMsg"), "Enter an amount greater than 0.", true);
     return;
   }
   if (!account || !signer) {
-    setMsg($("createMsg"), "Hubungkan wallet dulu untuk buat invoice.", true);
+    setMsg($("createMsg"), "Connect your wallet first to create an invoice.", true);
     return;
   }
   if (isPlaceholder()) {
-    setMsg($("createMsg"), "Kontrak belum ter-deploy (alamat placeholder) — invoice belum bisa dibuat. Coba lagi setelah wiring final.", true);
+    setMsg($("createMsg"), "Contract not deployed yet (placeholder address) — invoices can't be created. Try again after the final wiring.", true);
     return;
   }
   const token = tokenKind === "usdt" ? CONFIG.MOCK_USDT_ADDRESS : ZERO;
   if (tokenKind === "usdt" && token.toLowerCase() === ZERO) {
-    setMsg($("createMsg"), "Alamat MockUSDT masih placeholder — pilih tBNB untuk sementara.", true);
+    setMsg($("createMsg"), "The MockUSDT address is still a placeholder — choose tBNB for now.", true);
     return;
   }
-  setMsg($("createMsg"), "Mengecek Agent ID wallet kamu…", false);
+  setMsg($("createMsg"), "Checking your wallet's Agent ID…", false);
   try {
     const has = await agentpayRead.hasAgentId(account);
     if (!has) {
-      setMsg($("createMsg"), "Wallet ini tidak memegang Agent ID (.ai) — buat invoice hanya untuk pemegang Agent ID.", true);
+      setMsg($("createMsg"), "This wallet doesn't hold an Agent ID (.ai) — creating invoices is for Agent ID holders only.", true);
       return;
     }
     const [owner, ok] = await agentpayRead.resolveName(name);
     if (!ok || owner.toLowerCase() !== account.toLowerCase()) {
-      setMsg($("createMsg"), `Nama ${name} bukan milik wallet ini — invoice hanya bisa dibuat atas nama .ai milikmu.`, true);
+      setMsg($("createMsg"), `Name ${name} doesn't belong to this wallet — invoices can only be created under your own .ai name.`, true);
       return;
     }
     const amount = parseAmountForToken(amountStr, token);
-    setMsg($("createMsg"), "Mengirim invoice… konfirmasi di wallet.", false);
+    setMsg($("createMsg"), "Sending invoice… confirm in your wallet.", false);
     const tx = await agentpay.createInvoice(amount, token, memo, name);
-    setMsg($("createMsg"), "Invoice terkirim, menunggu konfirmasi… " + txLink(tx.hash), false);
+    setMsg($("createMsg"), "Invoice sent, waiting for confirmation… " + txLink(tx.hash), false);
     const receipt = await tx.wait();
     let newId = null;
     try {
@@ -513,41 +513,41 @@ async function createClicked() {
         const parsed = agentpay.interface.parseLog(log);
         if (parsed && parsed.name === "InvoiceCreated") { newId = Number(parsed.args.id); break; }
       }
-    } catch (e) { /* fallback di bawah */ }
+    } catch (e) { /* fallback below */ }
     if (newId === null) {
-      try { newId = Number(await agentpayRead.invoiceCount()) - 1; } catch (e) { /* abaikan */ }
+      try { newId = Number(await agentpayRead.invoiceCount()) - 1; } catch (e) { /* ignore */ }
     }
     setMsg($("createMsg"),
-      `Invoice ${newId !== null ? "#" + newId : ""} berhasil dibuat ✓ ${txLink(receipt.hash)}` +
-      (newId !== null ? ` — bagikan ID ${newId} ke customer.` : ""), false);
+      `Invoice ${newId !== null ? "#" + newId : ""} created ✓ ${txLink(receipt.hash)}` +
+      (newId !== null ? ` — share ID ${newId} with the customer.` : ""), false);
     refreshDashboard();
   } catch (e) {
     setMsg($("createMsg"), friendlyError(e), true);
   }
 }
 
-// ---- 4. Dashboard merchant ----------------------------------------------------
+// ---- 4. Merchant dashboard ----------------------------------------------------
 async function refreshDashboard() {
   const tbody = $("invTable");
   if (!account) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Hubungkan wallet, lalu muat ulang.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Connect your wallet, then reload.</td></tr>`;
     return;
   }
   if (isPlaceholder()) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Kontrak belum ter-deploy (alamat placeholder) — dashboard belum bisa dimuat.</td></tr>`;
-    setMsg($("dashMsg"), "Dashboard aktif setelah wiring final.", false);
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Contract not deployed yet (placeholder address) — the dashboard can't be loaded.</td></tr>`;
+    setMsg($("dashMsg"), "The dashboard activates after the final wiring.", false);
     return;
   }
-  setMsg($("dashMsg"), "Memuat invoice…", false);
+  setMsg($("dashMsg"), "Loading invoices…", false);
   try {
     const count = Number(await agentpayRead.invoiceCount());
     if (count === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="muted">Belum ada invoice di kontrak ini.</td></tr>`;
-      setMsg($("dashMsg"), "Belum ada invoice.", false);
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">No invoices on this contract yet.</td></tr>`;
+      setMsg($("dashMsg"), "No invoices yet.", false);
       return;
     }
     const rows = [];
-    const start = Math.max(0, count - 100); // batasi 100 terakhir
+    const start = Math.max(0, count - 100); // limit to the latest 100
     for (let id = count - 1; id >= start; id--) {
       const inv = await agentpayRead.getInvoice(id);
       if (inv[1].toLowerCase() !== account.toLowerCase()) continue;
@@ -557,16 +557,16 @@ async function refreshDashboard() {
           <td>#${Number(inv[0])}</td>
           <td>${inv[2] || "—"}<br><span class="muted">${inv[5] || ""}</span></td>
           <td>${formatAmount(inv[3], inv[4])}<br><span class="muted">${tokenLabel(inv[4])}</span></td>
-          <td>${paid ? '<span class="pill paid">Dibayar</span>' : '<span class="pill unpaid">Belum</span>'}</td>
+          <td>${paid ? '<span class="pill paid">Paid</span>' : '<span class="pill unpaid">Not yet</span>'}</td>
           <td>${paid ? addrLink(inv[7]) : "—"}</td>
-          <td>${paid ? new Date(Number(inv[8]) * 1000).toLocaleString("id-ID") : "—"}</td>
+          <td>${paid ? new Date(Number(inv[8]) * 1000).toLocaleString("en-US") : "—"}</td>
         </tr>`);
     }
     tbody.innerHTML = rows.join("") ||
-      `<tr><td colspan="6" class="muted">Wallet ini belum membuat invoice apa pun.</td></tr>`;
-    setMsg($("dashMsg"), `Menampilkan ${rows.length} invoice milik wallet ini (dari ${count} total).`, false);
+      `<tr><td colspan="6" class="muted">This wallet hasn't created any invoices yet.</td></tr>`;
+    setMsg($("dashMsg"), `Showing ${rows.length} invoices from this wallet (of ${count} total).`, false);
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="err">Gagal memuat dashboard.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="err">Failed to load the dashboard.</td></tr>`;
     setMsg($("dashMsg"), friendlyError(e), true);
   }
 }
@@ -574,8 +574,8 @@ async function refreshDashboard() {
 if (typeof window.ethers !== "undefined") {
   init();
 } else {
-  // CDN gagal — init tetap jalan untuk banner placeholder, tapi tombol
-  // transaksi akan menolak dengan pesan yang jelas.
+  // CDN failed — init still runs for the placeholder banner, but transaction
+  // buttons will refuse with a clear message.
   document.addEventListener("DOMContentLoaded", () => {
     try { init(); } catch (e) { console.warn(e); }
   });
