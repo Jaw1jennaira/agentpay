@@ -1,12 +1,9 @@
 // AgentPay — frontend config (single source of truth for addresses).
 // BSC TESTNET only (chain 97). NEVER point this at mainnet.
 //
-// STATUS (2026-11-19): the testnet contracts have NOT been deployed yet
-// (deployer tBNB balance is 0 — faucet is being handled separately).
-// All contract addresses below are placeholders (0x000...0) on purpose.
-// Fill them from deployments.json once the contract builder delivers it,
-// then re-verify the live demo end-to-end. The UI detects placeholder
-// addresses and disables on-chain actions with a clear message until then.
+// STATUS (2026-11-19 ~03:10 WIB): contracts DEPLOYED on BSC testnet + demo
+// on-chain OK (invoice #1 paid, tip sent). Addresses below filled from
+// deployments.json. Sourcify verification still PENDING (retry separately).
 
 const CONFIG = {
   // Chain: BNB Smart Chain Testnet
@@ -18,11 +15,11 @@ const CONFIG = {
   NATIVE_SYMBOL: "tBNB",
   NATIVE_DECIMALS: 18,
 
-  // TODO (wiring final): isi dari deployments.json
-  AGENTPAY_ADDRESS: "0x0000000000000000000000000000000000000000",
-  MOCK_USDT_ADDRESS: "0x0000000000000000000000000000000000000000",
+  // Wired 2026-11-19 ~03:10 WIB from deployments.json (testnet deploy OK).
+  AGENTPAY_ADDRESS: "0x2882D2406B660cF697221c52C616992bD6d0539f",
+  MOCK_USDT_ADDRESS: "0x88b8Aee182D2de2B62a0e0a458006608B2bA9b46",
   // Testnet Agent ID registry is a MOCK (SPACE ID registry lives on mainnet).
-  REGISTRY_ADDRESS: "0x0000000000000000000000000000000000000000",
+  REGISTRY_ADDRESS: "0x2eF0A9708182eB988f20C0C278224908e0Bc2FA9",
 
   // SPACE ID Agent ID registry on BNB mainnet (reference only — NOT used on testnet).
   REGISTRY_MAINNET: "0x60b9262456de011f7d15a54cdd8c48baaa8b022f",
@@ -43,9 +40,10 @@ const AGENTPAY_ABI = [
   "function invoiceCount() view returns (uint256)",
   "function payInvoice(uint256 id) payable",
   "function tip(string name, string memo) payable",
+  "function tipToken(address token, uint256 amount, string name, string memo)",
   "event InvoiceCreated(uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo)",
-  "event InvoicePaid(uint256 id, address payer, uint256 amount)",
-  "event TipSent(address from, address to, string toName, uint256 amount, string memo)",
+  "event InvoicePaid(uint256 id, address payer, address merchant, string merchantName, uint256 amount, address token)",
+  "event TipSent(address payer, address recipient, string name, uint256 amount, address token, string memo)",
 ];
 
 // Minimal ERC20 ABI (MockUSDT is 6 decimals).

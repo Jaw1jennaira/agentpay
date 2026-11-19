@@ -409,12 +409,15 @@ async function tipClicked() {
   const name = $("tipName").value.trim().toLowerCase();
   const amountStr = $("tipAmount").value.trim();
   const memo = $("tipMemo").value.trim();
+  const tokenKind = $("tipToken") ? $("tipToken").value : "native";
+  const isUsdt = tokenKind === "usdt";
+  const unit = isUsdt ? "MockUSDT" : "tBNB";
   if (!validAiName(name)) {
     setMsg($("tipMsg"), "Nama tidak valid — harus berakhiran .ai (contoh: jennairafunds.ai).", true);
     return;
   }
   if (!amountStr || Number(amountStr) <= 0) {
-    setMsg($("tipMsg"), "Masukkan jumlah tip lebih dari 0 tBNB.", true);
+    setMsg($("tipMsg"), "Masukkan jumlah tip lebih dari 0 " + unit + ".", true);
     return;
   }
   if (!account || !signer) {
@@ -425,6 +428,10 @@ async function tipClicked() {
     setMsg($("tipMsg"), "Kontrak belum ter-deploy (alamat placeholder) — tip belum bisa dikirim. Coba lagi setelah wiring final.", true);
     return;
   }
+  if (isUsdt && CONFIG.MOCK_USDT_ADDRESS.toLowerCase() === ZERO) {
+    setMsg($("tipMsg"), "Alamat MockUSDT masih placeholder — pilih tBNB untuk sementara.", true);
+    return;
+  }
   setMsg($("tipMsg"), "Mengecek " + name + " dulu…", false);
   try {
     const [owner, ok] = await agentpayRead.resolveName(name);
@@ -432,11 +439,25 @@ async function tipClicked() {
       setMsg($("tipMsg"), `Nama ${name} tidak ditemukan / tidak punya pemilik — tip dibatalkan.`, true);
       return;
     }
-    setMsg($("tipMsg"), `Mengirim ${amountStr} tBNB ke ${name} (${shortAddr(owner)})… konfirmasi di wallet.`, false);
-    const tx = await agentpay.tip(name, memo, { value: ethers.parseEther(amountStr) });
+    let tx;
+    if (isUsdt) {
+      const amount = ethers.parseUnits(amountStr, 6);
+      const token = new ethers.Contract(CONFIG.MOCK_USDT_ADDRESS, ERC20_ABI, signer);
+      const allowance = await token.allowance(account, CONFIG.AGENTPAY_ADDRESS);
+      setMsg($("tipMsg"), `Mengirim ${amountStr} MockUSDT ke ${name} (${shortAddr(owner)})… konfirmasi di wallet.`, false);
+      if (allowance < amount) {
+        const atx = await token.approve(CONFIG.AGENTPAY_ADDRESS, amount);
+        setMsg($("tipMsg"), "Approve MockUSDT terkirim, menunggu konfirmasi… " + txLink(atx.hash), false);
+        await atx.wait();
+      }
+      tx = await agentpay.tipToken(CONFIG.MOCK_USDT_ADDRESS, amount, name, memo);
+    } else {
+      setMsg($("tipMsg"), `Mengirim ${amountStr} tBNB ke ${name} (${shortAddr(owner)})… konfirmasi di wallet.`, false);
+      tx = await agentpay.tip(name, memo, { value: ethers.parseEther(amountStr) });
+    }
     setMsg($("tipMsg"), "Tip terkirim, menunggu konfirmasi… " + txLink(tx.hash), false);
     const receipt = await tx.wait();
-    setMsg($("tipMsg"), `Tip ${amountStr} tBNB ke ${name} berhasil ✓ ${txLink(receipt.hash)}`, false);
+    setMsg($("tipMsg"), `Tip ${amountStr} ${unit} ke ${name} berhasil ✓ ${txLink(receipt.hash)}`, false);
   } catch (e) {
     setMsg($("tipMsg"), friendlyError(e), true);
   }
