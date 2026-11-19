@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentPay — Pay to an Agent ID name (.ai), not a 0x address</title>
 <meta name="description" content="AgentPay: payment gateway + tipping for SPACE ID Agent ID (.ai) holders on BNB Chain Testnet. Pay invoices, send tips, and manage merchant invoices — no need to memorize 0x addresses.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FDB515'/%3E%3Ctext x='32' y='44' font-size='36' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%23111'%3EA%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,8 +26,7 @@
 </header>
 
 <div id="cdnError">
-  Failed to load the ethers.js library from the CDN. Check your internet connection, then reload this page.
-  (CDN: cdn.jsdelivr.net/npm/ethers@6.13.0)
+  Failed to load the ethers.js library. Check your internet connection, then reload this page.
 </div>
 
 <div class="card" id="placeholderBanner" style="display:none">
@@ -156,9 +156,9 @@
   MIT License · Testnet only, not mainnet.
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script src="ethers.umd.min.js"></script>
 <script>
-  // Simple fallback if the CDN fails to load.
+  // Simple fallback if the library fails to load.
   if (typeof window.ethers === "undefined") {
     document.getElementById("cdnError").style.display = "block";
   }

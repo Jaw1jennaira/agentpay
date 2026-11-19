@@ -35,15 +35,15 @@ const AGENTPAY_ABI = [
   "function resolveName(string name) view returns (address owner, bool ok)",
   "function hasAgentId(address wallet) view returns (bool)",
   "function createInvoice(uint256 amount, address token, string memo, string merchantName)",
-  "function getInvoice(uint256 id) view returns (uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo, bool paid, address payer, uint256 paidAt)",
-  "function invoices(uint256 id) view returns (uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo, bool paid, address payer, uint256 paidAt)",
+  "function getInvoice(uint256 id) view returns (tuple(uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo, bool paid, address payer, uint256 paidAt))",
+  "function invoices(uint256 id) view returns (tuple(uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo, bool paid, address payer, uint256 paidAt))",
   "function invoiceCount() view returns (uint256)",
   "function payInvoice(uint256 id) payable",
   "function tip(string name, string memo) payable",
   "function tipToken(address token, uint256 amount, string name, string memo)",
-  "event InvoiceCreated(uint256 id, address merchant, string merchantName, uint256 amount, address token, string memo)",
-  "event InvoicePaid(uint256 id, address payer, address merchant, string merchantName, uint256 amount, address token)",
-  "event TipSent(address payer, address recipient, string name, uint256 amount, address token, string memo)",
+  "event InvoiceCreated(uint256 indexed id, address indexed merchant, string merchantName, uint256 amount, address token, string memo)",
+  "event InvoicePaid(uint256 indexed id, address indexed payer, address indexed merchant, string merchantName, uint256 amount, address token)",
+  "event TipSent(address indexed payer, address indexed recipient, string name, uint256 amount, address token, string memo)",
 ];
 
 // Minimal ERC20 ABI (MockUSDT is 6 decimals).
